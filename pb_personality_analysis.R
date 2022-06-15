@@ -221,11 +221,28 @@ CronbachAlpha(a, na.rm = TRUE)
 CronbachAlpha(n, na.rm = TRUE)
 #### Between The Years
 
-function
+btw.years.cons <- function (trait, bear, year, data) {
+  
+  bear_factor <- data %>%
+    filter(Year == year, Bear == bear) %>%
+    select(contains(trait),-Observer, -Exhibit, -Bear, -Month, -Year)
+  CronbachAlpha(bear_factor, na.rm = TRUE)
+}
 
+Traits <- c("O", "C", "E", "A", "N")
+cons_2018 <- data.frame()
+test <- btw.years.cons("Aurora", "O", 2018, survey_18_20)
+
+
+for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2018, survey_18_20)
+cons_2018 <- rbind(cons_2018, output)# Store output in dataframe
+}
+
+colnames(cons_2018) <- Traits
+rownames(cons_2018) <- bears
 
 ### 2018
-data2018 <- data.frame(subset(data, (Year == '2018')))
+data2018 <- data.frame(subset(survey_18_20, (Year == '2018')))
 ## Aurora
 a8 <- data.frame(subset(data2018, (Bear == 'Aurora')))
 #Openness
