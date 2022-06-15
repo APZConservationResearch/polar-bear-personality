@@ -16,6 +16,8 @@ library(DescTools)
 library(ggpubr)
 library(devtools)
 library(janitor)
+library(corrplot)
+library(readr)
 
 survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2020.csv")
 
@@ -43,7 +45,7 @@ radarchart(int_data2, seg = 3, plwd = 4, cglty = 1, plty = 1, vlcex = 1.1, axist
 legend(x = -1.59, y = 1.44, "A", bty="n", cex = 2.3)
 }
 
-within.cor <- function (bear, data) {
+within.bear <- function (bear, data) {
   
   cor_data <- data %>%
     filter(Bear == bear) %>%
@@ -54,6 +56,27 @@ within.cor <- function (bear, data) {
   KendallW(cor_data, TRUE, test = TRUE)
   }
 
+##### Within Each Bear and broken down within each Factor
+ 
+bear.by.factor <- function  (trait, bear, data) {
+  byfactor_data <- data %>%
+    filter(Bear == bear) %>%
+    select(Observer, contains(trait), -Exhibit, -Bear, -Month, -Year) %>%
+    group_by(Observer)  %>%
+    summarise(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+    data.table::transpose(make.names = 'Observer', keep.names = 'Observer') %>%
+    column_to_rownames(var="Observer")
+  KendallW(byfactor_data, TRUE, test = FALSE)
+}
+
+aurora2 <-  bear.by.factor("Aurora", "o", survey_18_20)
+
+aurora <- data.frame(subset(survey_18_20, (Bear == 'Aurora')))
+aurora <- data.frame(subset(aurora, select = c(Observer, O1, O2, O3, O4, O5, O6)))
+aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
+aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
+aurora <- t(aurora)
+KendallW(aurora, TRUE, test = TRUE)
 
 # B.1 | Radar Chart Code ----
 
@@ -83,9 +106,6 @@ male_radar2019 <- radar.chart(data = ocean, year = "2019", bears = male_bears,
 
 female_radar2018 <- radar.chart(data = ocean, year = "2019", bears = female_bears,
                                 title = "Female Bears")
-
-
-
 
 --------------------------------------------------------------------------------
 # B.2 - Interrater Reliability: Kendall's Coefficient of concordance Wt - between rater difference ----
@@ -138,351 +158,25 @@ ggplot(data = total, aes(x = Var1, y = Var2, fill = value)) +
 
 bears <- unique(survey_18_20$Bear)
 
-kendall_results <- sapply(bears, within.cor, survey_18_20)
+within_bear_results <- sapply(bears, within.bear, survey_18_20)
 
 
 ##### Within Each Bear and broken down within each Factor
-##### Aurora
-# Openness
-aurora <- data.frame(subset(data, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-KendallW(aurora, TRUE, test = TRUE)
-# Conscientiousness
-aurora <- data.frame(subset(data, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-KendallW(aurora, TRUE, test = TRUE) #### Not Significant
-# extraversion
-aurora <- data.frame(subset(data, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-KendallW(aurora, TRUE, test = TRUE)
-# Agreeableness
-aurora <- data.frame(subset(data, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-KendallW(aurora, TRUE, test = TRUE)
-# Neuroticism
-aurora <- data.frame(subset(data, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-colnames(baffin) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(aurora, TRUE, test = TRUE)
-##### Baffin
-# Openness
-baffin <- data.frame(subset(data, Bear == 'Baffin'))
-baffin <- data.frame(subset(baffin, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-baffin <- aggregate(baffin, by = list(baffin$Observer), mean, na.rm = TRUE)
-baffin <- data.frame(subset(baffin, select = -c(Observer, Group.1)))
-baffin <- t(baffin)
-colnames(baffin) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(baffin, TRUE, test = TRUE)
-#Conscientiousness
-baffin <- data.frame(subset(data, Bear == 'Baffin'))
-baffin <- data.frame(subset(baffin, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-baffin <- aggregate(baffin, by = list(baffin$Observer), mean, na.rm = TRUE)
-baffin <- data.frame(subset(baffin, select = -c(Observer)))
-baffin <- t(baffin)
-colnames(baffin) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(baffin, TRUE, test = TRUE)
-kaska <- data.frame(subset(kaska, select = -c(Observer, Group.1)))
-kaska <- t(kaska)
-colnames(kaska) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(kaska, TRUE, test = TRUE)
-# Agreeableness
-kaska <- data.frame(subset(data, Bear == 'Kaska'))
-kaska <- data.frame(subset(kaska, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-kaska <- aggregate(kaska, by = list(kaska$Observer), mean, na.rm = TRUE)
-kaska <- data.frame(subset(kaska, select = -c(Observer, Group.1)))
-kaska <- t(kaska)
-colnames(kaska) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(kaska, TRUE, test = TRUE)
-# Neuroticism
-kaska <- data.frame(subset(data, Bear == 'Kaska'))
-kaska <- data.frame(subset(kaska, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-kaska <- aggregate(kaska, by = list(kaska$Observer), mean, na.rm = TRUE)
-kaska <- data.frame(subset(kaska, select = -c(Observer, Group.1)))
-kaska <- t(kaska)
-colnames(kaska) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(kaska, TRUE, test = TRUE)
-##### Nanuq
-# Openness
-nanuq <- data.frame(subset(data, Bear == 'Nanuq'))
-nanuq <- data.frame(subset(nanuq, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Observer, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-# Conscientiousness
-nanuq <- data.frame(subset(data, Bear == 'Nanuq'))
-nanuq <- data.frame(subset(nanuq, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Observer, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-# Extraversion
-nanuq <- data.frame(subset(data, Bear == 'Nanuq'))
-nanuq <- data.frame(subset(nanuq, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Observer, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-# Agreeableness
-nanuq <- data.frame(subset(data, Bear == 'Nanuq'))
-nanuq <- data.frame(subset(nanuq, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Observer, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-# Neuroticism
-nanuq <- data.frame(subset(data, Bear == 'Nanuq'))
-nanuq <- data.frame(subset(nanuq, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Observer, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-##### Siku
-# Openness
-siku <- data.frame(subset(data, Bear == 'Siku'))
-siku <- data.frame(subset(siku, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Observer, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-# Consciousness
-siku <- data.frame(subset(data, Bear == 'Siku'))
-siku <- data.frame(subset(siku, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Observer, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-# Extraversion
-siku <- data.frame(subset(data, Bear == 'Siku'))
-siku <- data.frame(subset(siku, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Observer, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-# Agreeableness
-siku <- data.frame(subset(data, Bear == 'Siku'))
-siku <- data.frame(subset(siku, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Observer, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-# Neuroticism
-siku <- data.frame(subset(data, Bear == 'Siku'))
-siku <- data.frame(subset(siku, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Observer, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-##### Star
-# Openness
-star <- data.frame(subset(data, Bear == 'Star'))
-star <- data.frame(subset(star, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Observer, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE)
-# Conscientiousness
-star <- data.frame(subset(data, Bear == 'Star'))
-star <- data.frame(subset(star, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Observer, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE) ### Not Significant
-# Extraversion
-star <- data.frame(subset(data, Bear == 'Star'))
-star <- data.frame(subset(star, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Observer, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE)
-# Agreeableness
-star <- data.frame(subset(data, Bear == 'Star'))
-star <- data.frame(subset(star, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Observer, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE)
-# Neuroticism
-star <- data.frame(subset(data, Bear == 'Star'))
-star <- data.frame(subset(star, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Observer, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE)
-##### Storm
-# Openness
-storm <- data.frame(subset(data, Bear == 'Storm'))
-storm <- data.frame(subset(storm, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Observer, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE)
-# Consciousness
-storm <- data.frame(subset(data, Bear == 'Storm'))
-storm <- data.frame(subset(storm, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Observer, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE)
-# Extraversion
-storm <- data.frame(subset(data, Bear == 'Storm'))
-storm <- data.frame(subset(storm, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Observer, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE)
-# Agreeableness
-storm <- data.frame(subset(data, Bear == 'Storm'))
-storm <- data.frame(subset(storm, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Observer, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE)
-# Neuroticism
-storm <- data.frame(subset(data, Bear == 'Storm'))
-storm <- data.frame(subset(storm, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Observer, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE)
-##### WILLOW
-# Openness
-willow <- data.frame(subset(data, Bear == 'Willow'))
-willow <- data.frame(subset(willow, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Observer, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE)
-# Conscientiousness
-willow <- data.frame(subset(data, Bear == 'Willow'))
-willow <- data.frame(subset(willow, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Observer, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE)
-# Extraversion
-willow <- data.frame(subset(data, Bear == 'Willow'))
-willow <- data.frame(subset(willow, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Observer, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE)
-# Agreeableness
-willow <- data.frame(subset(data, Bear == 'Willow'))
-willow <- data.frame(subset(willow, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Observer, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE)
-# Neuroticism
-willow <- data.frame(subset(data, Bear == 'Willow'))
-willow <- data.frame(subset(willow, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Observer, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE)
-##### YORK
-# Openness
-york <- data.frame(subset(data, Bear == 'York'))
-york <- data.frame(subset(york, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Observer, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
-# Conscientiousness
-york <- data.frame(subset(data, Bear == 'York'))
-york <- data.frame(subset(york, select = c(Observer, C1, C2, C3, C4, C5, C6)))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Observer, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
-# Extraversion
-york <- data.frame(subset(data, Bear == 'York'))
-york <- data.frame(subset(york, select = c(Observer, E1, E2, E3, E4, E5, E6)))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Observer, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
-# Agreeableness
-york <- data.frame(subset(data, Bear == 'York'))
-york <- data.frame(subset(york, select = c(Observer, A1, A2, A3, A4, A5, A6)))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Observer, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
-# Neuroticism
-york <- data.frame(subset(data, Bear == 'York'))
-york <- data.frame(subset(york, select = c(Observer, N1, N2, N3, N4, N5, N6)))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Observer, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
+
+traits <- c("o", "c", "e", "a", "n")
+y  <- data.frame()   
+
+for (a in bears) {output <- sapply(traits, bear.by.factor, a, survey_18_20)
+y <- rbind(y, output)# Store output in dataframe
+}
+
+colnames(y) <- traits
+rownames(y) <- bears
+
 ##### Overall Mean Within The Factors
-# Openness
-o <- c(0.5609589, 0.53745, 0.5496357, 0.5968725, 0.581592, 0.4534231, 0.383905, 0.5243402, 0.6386507)
-mean(o)
-sd(o)
-# Conscientiousness
-c <- c(0.1044974, 0.5984315, 0.3446872, 0.3777025, 0.469697, 0.1838131, 0.3726287, 0.7359525, 0.463034)
-mean(c)
-sd(c)
-# Extraversion
-e <- c(0.4937343, 0.428804, 0.6854491, 0.3740187, 0.6198585, 0.4029342, 0.5860621, 0.7842186, 0.5122995)
-mean(e)
-sd(e)
-# Agreeableness
-a <- c(0.3316017, 0.1190135, 0.3990426, 0.3806977, 0.7611054, 0.4034792, 0.2357668, 0.5468446, 0.7019374)
-mean(a)
-sd(a)
-# Neuroticism
-n <- c(0.7039141, 0.4171891, 0.4602865, 0.3500912, 0.2195641, 0.344697, 0.2393978, 0.5804813, 0.3349713)
-mean(n)
-sd(n)
+summary <- sapply(y, function(y) c( "Stand dev" = sd(y), 
+                         "Mean"= mean(y,na.rm=TRUE)))
+
 ## graph for visualization (not included in thesis, mean and standard deviation listed instead)
 ocean <- data.frame(o)
 ocean <- data.frame(ocean, c)
@@ -498,24 +192,11 @@ ggplot(ocean, aes(x = variable, y = value, fill = variable)) +
   
 # B.3 | Internal Consistency Code ----
 
-## Internal Consistency: Cronbach's Alpha - how well the behavioural descriptions describe each factor (e.g how well being assertive" specifically describes Extraversion in polar bears)
+## Internal Consistency: Cronbach's Alpha ---- 
+## how well the behavioural descriptions describe each factor (e.g how well being assertive" specifically 
+## describes Extraversion in polar bears)
 #### data import
-library(tidyverse)
-library(readr)
-library (irr)
-library(dplyr)
-library(DescTools)
-library(corrplot)
-library(ggplot2)
-library(reshape2)
-rm(list=ls(all=T)) ## Code To Clear
-data <- read_csv("C:/Users/keria/Desktop/Code/Polar Bear Personality Data 2018-2020.csv")
-data$O1 <- as.numeric(data$O1)
-data$O2 <- as.numeric(data$O2)
-data$O3 <- as.numeric(data$O3)
-data$O4 <- as.numeric(data$O4)
-data$O5 <- as.numeric(data$O5)
-data$O6 <- as.numeric(data$O6)
+
 #### Overall
 #Openness
 o <- data.frame(data$O1, data$O2, data$O3, data$O4, data$O5, data$O6)
@@ -539,6 +220,10 @@ CronbachAlpha(e, na.rm = TRUE) #### Extraversion - pretty low (a = 0.47)
 CronbachAlpha(a, na.rm = TRUE)
 CronbachAlpha(n, na.rm = TRUE)
 #### Between The Years
+
+function
+
+
 ### 2018
 data2018 <- data.frame(subset(data, (Year == '2018')))
 ## Aurora
