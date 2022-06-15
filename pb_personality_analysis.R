@@ -43,7 +43,7 @@ radarchart(int_data2, seg = 3, plwd = 4, cglty = 1, plty = 1, vlcex = 1.1, axist
 legend(x = -1.59, y = 1.44, "A", bty="n", cex = 2.3)
 }
 
-within.cor <- function (data, bear) {
+within.cor <- function (bear, data) {
   
   cor_data <- data %>%
     filter(Bear == bear) %>%
@@ -54,23 +54,6 @@ within.cor <- function (data, bear) {
   KendallW(cor_data, TRUE, test = TRUE)
   }
 
-bears <- unique(survey_18_20$Bear)
-
-within_df <- df
-for (bear in bears) {
-  
-within.cor(survey_18_20, bears[bear]) }
-
-within_df[bear] <-  single_cor
-}
-
-aurora <- within.cor(survey_18_20, "Aurora")
-    
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-aurora <- t(aurora)
-colnames(aurora) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JS", "JZ", "SM", "SMG", "SS")
-KendallW(aurora, TRUE, test = TRUE)
 
 # B.1 | Radar Chart Code ----
 
@@ -105,12 +88,9 @@ female_radar2018 <- radar.chart(data = ocean, year = "2019", bears = female_bear
 
 
 --------------------------------------------------------------------------------
-  
-  
 # B.2 - Interrater Reliability: Kendall's Coefficient of concordance Wt - between rater difference ----
-#### data import
 
-### Interrater Correlation Matrix
+## Interrater Correlation Matrix ----
 total <- aggregate(survey_18_20, by = list(survey_18_20$Observer), mean, na.rm = TRUE)
 total <- data.frame(subset(total, select = -c(Year, Exhibit, Month, Observer, Bear)))
 total <- data.frame(t(total))
@@ -154,75 +134,12 @@ ggplot(data = total, aes(x = Var1, y = Var2, fill = value)) +
                                title.position = "top", title.hjust = 0.5))
 
 
-##### Within Each Bear across all the factors
-## Data Transformation
-# Aurora
-aurora2 <- data.frame(subset(survey_18_20, (Bear == 'Aurora')))
-aurora2 <- aggregate(aurora2, by = list(aurora2$Observer), mean, na.rm = TRUE)
-aurora2 <- data.frame(subset(aurora2, select = -c(Year, Exhibit, Month, Bear, Observer, Group.1)))
-aurora2 <- t(aurora2)
-colnames(aurora2) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JS", "JZ", "SM", "SMG", "SS")
-KendallW(aurora2, TRUE, test = TRUE)
-# Correlation plot for visualization purposes
-aurora <- cor(aurora)
-aurora
-corrplot(aurora, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
-# Baffin
-baffin <- data.frame(subset(survey_18_20, Bear == 'Baffin'))
-baffin <- aggregate(baffin, by = list(baffin$Observer), mean, na.rm = TRUE)
-baffin <- data.frame(subset(baffin, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-baffin <- t(baffin)
-colnames(baffin) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(baffin, TRUE, test = TRUE)
-# Kaska
-kaska <- data.frame(subset(survey_18_20, Bear == 'Kaska'))
-kaska <- aggregate(kaska, by = list(kaska$Observer), mean, na.rm = TRUE)
-kaska <- data.frame(subset(kaska, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-kaska <- t(kaska)
-colnames(kaska) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JS", "JZ", "SM", "SMG", "SS")
-KendallW(kaska, TRUE, test = TRUE)
-# Nanuq
-nanuq <- data.frame(subset(survey_18_20, Bear == 'Nanuq'))
-nanuq <- aggregate(nanuq, by = list(nanuq$Observer), mean, na.rm = TRUE)
-nanuq <- data.frame(subset(nanuq, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-nanuq <- t(nanuq)
-colnames(nanuq) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(nanuq, TRUE, test = TRUE)
-# Siku
-siku <- data.frame(subset(survey_18_20, Bear == 'Siku'))
-siku <- aggregate(siku, by = list(siku$Observer), mean, na.rm = TRUE)
-siku <- data.frame(subset(siku, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-siku <- t(siku)
-colnames(siku) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(siku, TRUE, test = TRUE)
-# Star
-star <- data.frame(subset(survey_18_20, Bear == 'Star'))
-star <- aggregate(star, by = list(star$Observer), mean, na.rm = TRUE)
-star <- data.frame(subset(star, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-star <- t(star)
-colnames(star) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(star, TRUE, test = TRUE)
-# Storm
-storm <- data.frame(subset(survey_18_20, Bear == 'Storm'))
-storm <- aggregate(storm, by = list(storm$Observer), mean, na.rm = TRUE)
-storm <- data.frame(subset(storm, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-storm <- t(storm)
-colnames(storm) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JS", "JZ", "SM", "SMG", "SS")
-KendallW(storm, TRUE, test = TRUE) #### Most Variance (w = 0.37, p = 7.9E-15)
-# Willow
-willow <- data.frame(subset(survey_18_20, Bear == 'Willow'))
-willow <- aggregate(willow, by = list(willow$Observer), mean, na.rm = TRUE)
-willow <- data.frame(subset(willow, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-willow <- t(willow)
-colnames(willow) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(willow, TRUE, test = TRUE) #### Least Variance (w = 0.68, p = 2.2E-16)
-# York
-york <- data.frame(subset(survey_18_20, Bear == 'York'))
-york <- aggregate(york, by = list(york$Observer), mean, na.rm = TRUE)
-york <- data.frame(subset(york, select = -c(Year, Exhibit, Month, Observer, Bear, Group.1)))
-york <- t(york)
-colnames(york) <- c("BD", "BF", "DC", "HP", "JE", "JK", "JKE", "JZ", "SM", "SMG", "SS")
-KendallW(york, TRUE, test = TRUE)
+## Within Each Bear across all the factors----
+
+bears <- unique(survey_18_20$Bear)
+
+kendall_results <- sapply(bears, within.cor, survey_18_20)
+
 
 ##### Within Each Bear and broken down within each Factor
 ##### Aurora
