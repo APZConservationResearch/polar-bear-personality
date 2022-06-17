@@ -18,6 +18,8 @@ library(devtools)
 library(janitor)
 library(corrplot)
 library(readr)
+library(ggridges)
+library(car)
 
 survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2020.csv")
 
@@ -69,14 +71,13 @@ bear.by.factor <- function  (trait, bear, data) {
   KendallW(byfactor_data, TRUE, test = FALSE)
 }
 
-aurora2 <-  bear.by.factor("Aurora", "o", survey_18_20)
-
-aurora <- data.frame(subset(survey_18_20, (Bear == 'Aurora')))
-aurora <- data.frame(subset(aurora, select = c(Observer, O1, O2, O3, O4, O5, O6)))
-aurora <- aggregate(aurora, by = list(aurora$Observer), mean, na.rm = TRUE)
-aurora <- data.frame(subset(aurora, select = -c(Observer, Group.1)))
-aurora <- t(aurora)
-KendallW(aurora, TRUE, test = TRUE)
+btw.years.cons <- function (trait, bear, year, data) {
+  
+  bear_factor <- data %>%
+    filter(Year == year, Bear == bear) %>%
+    select(contains(trait),-Observer, -Exhibit, -Bear, -Month, -Year)
+  CronbachAlpha(bear_factor, na.rm = TRUE)
+}
 
 # B.1 | Radar Chart Code ----
 
@@ -198,653 +199,51 @@ ggplot(ocean, aes(x = variable, y = value, fill = variable)) +
 #### data import
 
 #### Overall
-#Openness
-o <- data.frame(data$O1, data$O2, data$O3, data$O4, data$O5, data$O6)
-colnames(o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-#Conscientiousness
-c <- data.frame(data$C1, data$C2, data$C3, data$C4, data$C5, data$C6)
-colnames(c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-#Extraversion
-e <- data.frame(data$E1, data$E2, data$E3, data$E4, data$E5, data$E6)
-colnames(e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-#Agreeableness
-a <- data.frame(data$A1, data$A2, data$A3, data$A4, data$A5, data$A6)
-colnames(a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-#Neuroticism
-n <- data.frame(data$N1, data$N2, data$N3, data$N4, data$N5, data$N6)
-colnames(n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-## data analysis
-CronbachAlpha(o, na.rm = TRUE)
-CronbachAlpha(c, na.rm = TRUE)
-CronbachAlpha(e, na.rm = TRUE) #### Extraversion - pretty low (a = 0.47)
-CronbachAlpha(a, na.rm = TRUE)
-CronbachAlpha(n, na.rm = TRUE)
-#### Between The Years
 
-btw.years.cons <- function (trait, bear, year, data) {
-  
-  bear_factor <- data %>%
-    filter(Year == year, Bear == bear) %>%
-    select(contains(trait),-Observer, -Exhibit, -Bear, -Month, -Year)
-  CronbachAlpha(bear_factor, na.rm = TRUE)
+overall.alpha <- function (trait, data) {
+
+trait <- survey_18_20 %>% select(contains(trait), -Observer, -Exhibit, -Bear, -Month, -Year)
+CronbachAlpha(trait, na.rm = TRUE) 
 }
 
+overall_alpha <- data.frame(sapply(Traits, overall.alpha, survey_18_20))
+
+#### Between The Years
+
 Traits <- c("O", "C", "E", "A", "N")
+
 cons_2018 <- data.frame()
-test <- btw.years.cons("Aurora", "O", 2018, survey_18_20)
-
-
 for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2018, survey_18_20)
 cons_2018 <- rbind(cons_2018, output)# Store output in dataframe
 }
 
 colnames(cons_2018) <- Traits
-rownames(cons_2018) <- bears
+cons_2018$Bear <- bears
+cons_2018 <- cons_2018 %>% melt(id = "Bear", value.name = "Alpha", variable.name = "Factor") %>%
+  mutate(Year = 2018)
 
-### 2018
-data2018 <- data.frame(subset(survey_18_20, (Year == '2018')))
-## Aurora
-a8 <- data.frame(subset(data2018, (Bear == 'Aurora')))
-#Openness
-a8o <- data.frame(a8$O1, a8$O2, a8$O3, a8$O4, a8$O5, a8$O6)
-colnames(a8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(c("2018","Aurora", "O", CronbachAlpha(a8o, na.rm = TRUE)))
-#Conscientiousness
-a8c <- data.frame(a8$C1, a8$C2, a8$C3, a8$C4, a8$C5, a8$C6)
-colnames(a8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Aurora", "C", CronbachAlpha(a8c, na.rm = TRUE))))
-#Extraversion
-a8e <- data.frame(a8$E1, a8$E2, a8$E3, a8$E4, a8$E5, a8$E6)
-colnames(a8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Aurora", "E", CronbachAlpha(a8e, na.rm = TRUE))))
-#Agreeableness
-a8a <- data.frame(a8$A1, a8$A2, a8$A3, a8$A4, a8$A5, a8$A6)
-colnames(a8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Aurora", "A", CronbachAlpha(a8a, na.rm = TRUE))))
-#Neuroticism
-a8n <- data.frame(a8$N1, a8$N2, a8$N3, a8$N4, a8$N5, a8$N6)
-colnames(a8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Aurora", "N", CronbachAlpha(a8n, na.rm = TRUE))))
-## Baffin
-b8 <- data.frame(subset(data2018, (Bear == 'Baffin')))
-#Openness
-b8o <- data.frame(b8$O1, b8$O2, b8$O3, b8$O4, b8$O5, b8$O6)
-colnames(b8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Baffin", "O", CronbachAlpha(b8o, na.rm = TRUE))))
-#Conscientiousness
-b8c <- data.frame(b8$C1, b8$C2, b8$C3, b8$C4, b8$C5, b8$C6)
-colnames(b8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Baffin", "C", CronbachAlpha(b8c, na.rm = TRUE))))
-#Extraversion
-b8e <- data.frame(b8$E1, b8$E2, b8$E3, b8$E4, b8$E5, b8$E6)
-colnames(b8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Baffin", "E", CronbachAlpha(b8e, na.rm = TRUE))))
-#Agreeableness
-b8a <- data.frame(b8$A1, b8$A2, b8$A3, b8$A4, b8$A5, b8$A6)
-colnames(b8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Baffin", "A", CronbachAlpha(b8a, na.rm = TRUE))))
-#Neuroticism
-b8n <- data.frame(b8$N1, b8$N2, b8$N3, b8$N4, b8$N5, b8$N6)
-colnames(b8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Baffin", "N", CronbachAlpha(b8n, na.rm = TRUE))))
-## Kaska
-k8 <- data.frame(subset(data2018, (Bear == 'Kaska')))
-#Openness
-k8o <- data.frame(k8$O1, k8$O2, k8$O3, k8$O4, k8$O5, k8$O6)
-colnames(k8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Kaska", "O", CronbachAlpha(k8o, na.rm = TRUE))))
-#Conscientiousness
-k8c <- data.frame(k8$C1, k8$C2, k8$C3, k8$C4, k8$C5, k8$C6)
-colnames(k8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Kaska", "C", CronbachAlpha(k8c, na.rm = TRUE))))
-#Extraversion
-k8e <- data.frame(k8$E1, k8$E2, k8$E3, k8$E4, k8$E5, k8$E6)
-colnames(k8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Kaska", "E", CronbachAlpha(k8e, na.rm = TRUE))))
-#Agreeableness
-k8a <- data.frame(k8$A1, k8$A2, k8$A3, k8$A4, k8$A5, k8$A6)
-colnames(k8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Kaska", "A", CronbachAlpha(k8a, na.rm = TRUE))))
-#Neuroticism
-k8n <- data.frame(k8$N1, k8$N2, k8$N3, k8$N4, k8$N5, k8$N6)
-colnames(k8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Kaska", "N", CronbachAlpha(k8n, na.rm = TRUE))))
-## Nanuq
-n8 <- data.frame(subset(data2018, (Bear == 'Nanuq')))
-#Openness
-n8o <- data.frame(n8$O1, n8$O2, n8$O3, n8$O4, n8$O5, n8$O6)
-colnames(n8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Nanuq", "O", CronbachAlpha(n8o, na.rm = TRUE))))
-#Conscientiousness
-n8c <- data.frame(n8$C1, n8$C2, n8$C3, n8$C4, n8$C5, n8$C6)
-colnames(n8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Nanuq", "C", CronbachAlpha(n8c, na.rm = TRUE))))
-#Extraversion
-n8e <- data.frame(n8$E1, n8$E2, n8$E3, n8$E4, n8$E5, n8$E6)
-colnames(n8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Nanuq", "E", CronbachAlpha(n8e, na.rm = TRUE))))
-#Agreeableness
-n8a <- data.frame(n8$A1, n8$A2, n8$A3, n8$A4, n8$A5, n8$A6)
-colnames(n8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Nanuq", "A", CronbachAlpha(n8a, na.rm = TRUE))))
-#Neuroticism
-n8n <- data.frame(n8$N1, n8$N2, n8$N3, n8$N4, n8$N5, n8$N6)
-colnames(n8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Nanuq", "N", CronbachAlpha(n8n, na.rm = TRUE))))
-## Siku
-si8 <- data.frame(subset(data2018, (Bear == 'Siku')))
-#Openness
-si8o <- data.frame(si8$O1, si8$O2, si8$O3, si8$O4, si8$O5, si8$O6)
-colnames(si8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Siku", "O", CronbachAlpha(si8o, na.rm = TRUE))))
-#Conscientiousness
-si8c <- data.frame(si8$C1, si8$C2, si8$C3, si8$C4, si8$C5, si8$C6)
-colnames(si8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Siku", "C", CronbachAlpha(si8c, na.rm = TRUE))))
-#Extraversion
-si8e <- data.frame(si8$E1, si8$E2, si8$E3, si8$E4, si8$E5, si8$E6)
-colnames(si8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Siku", "E", CronbachAlpha(si8e, na.rm = TRUE))))
-#Agreeableness
-si8a <- data.frame(si8$A1, si8$A2, si8$A3, si8$A4, si8$A5, si8$A6)
-colnames(si8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Siku", "A", CronbachAlpha(si8a, na.rm = TRUE))))
-#Neuroticism
-si8n <- data.frame(si8$N1, si8$N2, si8$N3, si8$N4, si8$N5, si8$N6)
-colnames(si8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Siku", "N", CronbachAlpha(si8n, na.rm = TRUE))))
-## Star
-s8 <- data.frame(subset(data2018, (Bear == 'Star')))
-#Openness
-s8o <- data.frame(s8$O1, s8$O2, s8$O3, s8$O4, s8$O5, s8$O6)
-colnames(s8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Star", "O", CronbachAlpha(s8o, na.rm = TRUE))))
-#Conscientiousness
-s8c <- data.frame(s8$C1, s8$C2, s8$C3, s8$C4, s8$C5, s8$C6)
-colnames(s8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Star", "C", CronbachAlpha(s8c, na.rm = TRUE))))
-#Extraversion
-s8e <- data.frame(s8$E1, s8$E2, s8$E3, s8$E4, s8$E5, s8$E6)
-colnames(s8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Star", "E", CronbachAlpha(s8e, na.rm = TRUE))))
-#Agreeableness
-s8a <- data.frame(s8$A1, s8$A2, s8$A3, s8$A4, s8$A5, s8$A6)
-colnames(s8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Star", "E", CronbachAlpha(s8a, na.rm = TRUE))))
-#Neuroticism
-s8n <- data.frame(s8$N1, s8$N2, s8$N3, s8$N4, s8$N5, s8$N6)
-colnames(s8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Star", "N", CronbachAlpha(s8n, na.rm = TRUE))))
-##Storm
-sm8 <- data.frame(subset(data2018, (Bear == 'Storm')))
-#Openness
-sm8o <- data.frame(sm8$O1, sm8$O2, sm8$O3, sm8$O4, sm8$O5, sm8$O6)
-colnames(sm8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Storm", "O", CronbachAlpha(sm8o, na.rm = TRUE))))
-#Conscientiousness
-sm8c <- data.frame(sm8$C1, sm8$C2, sm8$C3, sm8$C4, sm8$C5, sm8$C6)
-colnames(sm8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Storm", "C", CronbachAlpha(sm8c, na.rm = TRUE))))
-#Extraversion
-sm8e <- data.frame(sm8$E1, sm8$E2, sm8$E3, sm8$E4, sm8$E5, sm8$E6)
-colnames(sm8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "Storm", "E", CronbachAlpha(sm8e, na.rm = TRUE))))
-#Agreeableness
-sm8a <- data.frame(sm8$A1, sm8$A2, sm8$A3, sm8$A4, sm8$A5, sm8$A6)
-colnames(sm8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Storm", "A", CronbachAlpha(sm8a, na.rm = TRUE))))
-#Neuroticism
-sm8n <- data.frame(sm8$N1, sm8$N2, sm8$N3, sm8$N4, sm8$N5, sm8$N6)
-colnames(sm8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Storm", "N", CronbachAlpha(sm8n, na.rm = TRUE))))
-## Willow
-w8 <- data.frame(subset(data2018, (Bear == 'Willow')))
-#Openness
-w8o <- data.frame(w8$O1, w8$O2, w8$O3, w8$O4, w8$O5, w8$O6)
-colnames(w8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "Willow", "O", CronbachAlpha(w8o, na.rm = TRUE))))
-#Conscientiousness
-w8c <- data.frame(w8$C1, w8$C2, w8$C3, w8$C4, w8$C5, w8$C6)
-colnames(w8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "Willow", "C", CronbachAlpha(w8c, na.rm = TRUE))))
-#Extraversion
-w8e <- data.frame(w8$E1, w8$E2, w8$E3, w8$E4, w8$E5, w8$E6)
-colnames(w8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-<- data.frame(IC, add_column(c("2018", "Willow", "E", CronbachAlpha(w8e, na.rm = TRUE))))
-#Agreeableness
-w8a <- data.frame(w8$A1, w8$A2, w8$A3, w8$A4, w8$A5, w8$A6)
-colnames(w8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "Willow", "A", CronbachAlpha(w8a, na.rm = TRUE))))
-#Neuroticism
-w8n <- data.frame(w8$N1, w8$N2, w8$N3, w8$N4, w8$N5, w8$N6)
-colnames(w8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "Willow", "N", CronbachAlpha(w8n, na.rm = TRUE))))
-## York
-y8 <- data.frame(subset(data2018, (Bear == 'York')))
-#Openness
-y8o <- data.frame(y8$O1, y8$O2, y8$O3, y8$O4, y8$O5, y8$O6)
-colnames(y8o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2018", "York", "O", CronbachAlpha(y8o, na.rm = TRUE))))
-#Conscientiousness
-y8c <- data.frame(y8$C1, y8$C2, y8$C3, y8$C4, y8$C5, y8$C6)
-colnames(y8c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2018", "York", "C", CronbachAlpha(y8c, na.rm = TRUE))))
-#Extraversion
-y8e <- data.frame(y8$E1, y8$E2, y8$E3, y8$E4, y8$E5, y8$E6)
-colnames(y8e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2018", "York", "E", CronbachAlpha(y8e, na.rm = TRUE))))
-#Agreeableness
-y8a <- data.frame(y8$A1, y8$A2, y8$A3, y8$A4, y8$A5, y8$A6)
-colnames(y8a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2018", "York", "A", CronbachAlpha(y8a, na.rm = TRUE))))
-#Neuroticism
-y8n <- data.frame(y8$N1, y8$N2, y8$N3, y8$N4, y8$N5, y8$N6)
-colnames(y8n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2018", "York", "N", CronbachAlpha(y8n, na.rm = TRUE))))
-### 2019
-data2019 <- data.frame(subset(data, (Year == '2019')))
-## Aurora
-a9 <- data.frame(subset(data2019, (Bear == 'Aurora')))
-#Openness
-a9o <- data.frame(a9$O1, a9$O2, a9$O3, a9$O4, a9$O5, a9$O6)
-colnames(a9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Aurora", "O", CronbachAlpha(a9o, na.rm = TRUE))))
-#Conscientiousness
-a9c <- data.frame(a9$C1, a9$C2, a9$C3, a9$C4, a9$C5, a9$C6)
-colnames(a9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Aurora", "C", CronbachAlpha(a9c, na.rm = TRUE))))
-#Extraversion
-a9e <- data.frame(a9$E1, a9$E2, a9$E3, a9$E4, a9$E5, a9$E6)
-colnames(a9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Aurora", "E", CronbachAlpha(a9e, na.rm = TRUE))))
-#Agreeableness
-a9a <- data.frame(a9$A1, a9$A2, a9$A3, a9$A4, a9$A5, a9$A6)
-colnames(a9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Aurora", "A", CronbachAlpha(a9a, na.rm = TRUE))))
-#Neuroticism
-a9n <- data.frame(a9$N1, a9$N2, a9$N3, a9$N4, a9$N5, a9$N6)
-colnames(a9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Aurora", "N", CronbachAlpha(a9n, na.rm = TRUE))))
-## Baffin
-b9 <- data.frame(subset(data2019, (Bear == 'Baffin')))
-#Openness
-b9o <- data.frame(b9$O1, b9$O2, b9$O3, b9$O4, b9$O5, b9$O6)
-colnames(b9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Baffin", "O", CronbachAlpha(b9o, na.rm = TRUE))))
-#Conscientiousness
-b9c <- data.frame(b9$C1, b9$C2, b9$C3, b9$C4, b9$C5, b9$C6)
-colnames(b9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Baffin", "C", CronbachAlpha(b9c, na.rm = TRUE))))
-#Extraversion
-b9e <- data.frame(b9$E1, b9$E2, b9$E3, b9$E4, b9$E5, b9$E6)
-colnames(b9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Baffin", "E", CronbachAlpha(b9e, na.rm = TRUE))))
-#Agreeableness
-b9a <- data.frame(b9$A1, b9$A2, b9$A3, b9$A4, b9$A5, b9$A6)
-colnames(b9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Baffin", "A", CronbachAlpha(b9a, na.rm = TRUE))))
-#Neuroticism
-b9n <- data.frame(b9$N1, b9$N2, b9$N3, b9$N4, b9$N5, b9$N6)
-colnames(b9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Baffin", "N", CronbachAlpha(b9n, na.rm = TRUE))))
-## Kaska
-k9 <- data.frame(subset(data2019, (Bear == 'Kaska')))
-#Openness
-k9o <- data.frame(k9$O1, k9$O2, k9$O3, k9$O4, k9$O5, k9$O6)
-colnames(k9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Kaska", "O", CronbachAlpha(k9o, na.rm = TRUE))))
-#Conscientiousness
-k9c <- data.frame(k9$C1, k9$C2, k9$C3, k9$C4, k9$C5, k9$C6)
-colnames(k9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Kaska", "C", CronbachAlpha(k9c, na.rm = TRUE))))
-#Extraversion
-k9e <- data.frame(k9$E1, k9$E2, k9$E3, k9$E4, k9$E5, k9$E6)
-colnames(k9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Kaska", "E", CronbachAlpha(k9e, na.rm = TRUE))))
-#Agreeableness
-k9a <- data.frame(k9$A1, k9$A2, k9$A3, k9$A4, k9$A5, k9$A6)
-colnames(k9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Kaska", "A", CronbachAlpha(k9a, na.rm = TRUE))))
-#Neuroticism
-k9n <- data.frame(k9$N1, k9$N2, k9$N3, k9$N4, k9$N5, k9$N6)
-colnames(k9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Kaska", "N", CronbachAlpha(k9n, na.rm = TRUE))))
-## Nanuq
-n9 <- data.frame(subset(data2019, (Bear == 'Nanuq')))
-#Openness
-n9o <- data.frame(n9$O1, n9$O2, n9$O3, n9$O4, n9$O5, n9$O6)
-colnames(n9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Nanuq", "O", CronbachAlpha(n9o, na.rm = TRUE))))
-#Conscientiousness
-n9c <- data.frame(n9$C1, n9$C2, n9$C3, n9$C4, n9$C5, n9$C6)
-colnames(n9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Nanuq", "C", CronbachAlpha(n9c, na.rm = TRUE))))
-#Extraversion
-n9e <- data.frame(n9$E1, n9$E2, n9$E3, n9$E4, n9$E5, n9$E6)
-colnames(n9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Nanuq", "E", CronbachAlpha(n9e, na.rm = TRUE))))
-#Agreeableness
-n9a <- data.frame(n9$A1, n9$A2, n9$A3, n9$A4, n9$A5, n9$A6)
-colnames(n9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Nanuq", "A", CronbachAlpha(n9a, na.rm = TRUE))))
-#Neuroticism
-n9n <- data.frame(n9$N1, n9$N2, n9$N3, n9$N4, n9$N5, n9$N6)
-colnames(n9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Nanuq", "N", CronbachAlpha(n9n, na.rm = TRUE))))
-## Siku
-si9 <- data.frame(subset(data2019, (Bear == 'Siku')))
-#Openness
-si9o <- data.frame(si9$O1, si9$O2, si9$O3, si9$O4, si9$O5, si9$O6)
-colnames(si9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Siku", "O", CronbachAlpha(si9o, na.rm = TRUE))))
-#Conscientiousness
-si9c <- data.frame(si9$C1, si9$C2, si9$C3, si9$C4, si9$C5, si9$C6)
-colnames(si9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Siku", "C", CronbachAlpha(si9c, na.rm = TRUE))))
-#Extraversion
-si9e <- data.frame(si9$E1, si9$E2, si9$E3, si9$E4, si9$E5, si9$E6)
-colnames(si9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Siku", "E", CronbachAlpha(si9e, na.rm = TRUE))))
-#Agreeableness
-si9a <- data.frame(si9$A1, si9$A2, si9$A3, si9$A4, si9$A5, si9$A6)
-colnames(si9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Siku", "A", CronbachAlpha(si9a, na.rm = TRUE))))
-#Neuroticism
-si9n <- data.frame(si9$N1, si9$N2, si9$N3, si9$N4, si9$N5, si9$N6)
-colnames(si9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Siku", "N", CronbachAlpha(si9n, na.rm = TRUE))))
-## Star
-s9 <- data.frame(subset(data2019, (Bear == 'Star')))
-#Openness
-s9o <- data.frame(s9$O1, s9$O2, s9$O3, s9$O4, s9$O5, s9$O6)
-colnames(s9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Star", "O", CronbachAlpha(s9o, na.rm = TRUE))))
-#Conscientiousness
-s9c <- data.frame(s9$C1, s9$C2, s9$C3, s9$C4, s9$C5, s9$C6)
-colnames(s9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Star", "C", CronbachAlpha(s9c, na.rm = TRUE))))
-#Extraversion
-s9e <- data.frame(s9$E1, s9$E2, s9$E3, s9$E4, s9$E5, s9$E6)
-colnames(s9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Star", "E", CronbachAlpha(s9e, na.rm = TRUE))))
-#Agreeableness
-s9a <- data.frame(s9$A1, s9$A2, s9$A3, s9$A4, s9$A5, s9$A6)
-colnames(s9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Star", "E", CronbachAlpha(s9a, na.rm = TRUE))))
-#Neuroticism
-s9n <- data.frame(s9$N1, s9$N2, s9$N3, s9$N4, s9$N5, s9$N6)
-colnames(s9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Star", "N", CronbachAlpha(s9n, na.rm = TRUE))))
-##Storm
-sm9 <- data.frame(subset(data2019, (Bear == 'Storm')))
-#Openness
-sm9o <- data.frame(sm9$O1, sm9$O2, sm9$O3, sm9$O4, sm9$O5, sm9$O6)
-colnames(sm9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Storm", "O", CronbachAlpha(sm9o, na.rm = TRUE))))
-#Conscientiousness
-sm9c <- data.frame(sm9$C1, sm9$C2, sm9$C3, sm9$C4, sm9$C5, sm9$C6)
-colnames(sm9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Storm", "C", CronbachAlpha(sm9c, na.rm = TRUE))))
-#Extraversion
-sm9e <- data.frame(sm9$E1, sm9$E2, sm9$E3, sm9$E4, sm9$E5, sm9$E6)
-colnames(sm9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Storm", "E", CronbachAlpha(sm9e, na.rm = TRUE))))
-#Agreeableness
-sm9a <- data.frame(sm9$A1, sm9$A2, sm9$A3, sm9$A4, sm9$A5, sm9$A6)
-colnames(sm9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Storm", "A", CronbachAlpha(sm9a, na.rm = TRUE))))
-#Neuroticism
-sm9n <- data.frame(sm9$N1, sm9$N2, sm9$N3, sm9$N4, sm9$N5, sm9$N6)
-colnames(sm9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Storm", "N", CronbachAlpha(sm9n, na.rm = TRUE))))
-## Willow
-w9 <- data.frame(subset(data2019, (Bear == 'Willow')))
-#Openness
-w9o <- data.frame(w9$O1, w9$O2, w9$O3, w9$O4, w9$O5, w9$O6)
-colnames(w9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "Willow", "O", CronbachAlpha(w9o, na.rm = TRUE))))
-#Conscientiousness
-w9c <- data.frame(w9$C1, w9$C2, w9$C3, w9$C4, w9$C5, w9$C6)
-colnames(w9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "Willow", "C", CronbachAlpha(w9c, na.rm = TRUE))))
-#Extraversion
-w9e <- data.frame(w9$E1, w9$E2, w9$E3, w9$E4, w9$E5, w9$E6)
-colnames(w9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "Willow", "E", CronbachAlpha(w9e, na.rm = TRUE))))
-#Agreeableness
-w9a <- data.frame(w9$A1, w9$A2, w9$A3, w9$A4, w9$A5, w9$A6)
-colnames(w9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "Willow", "A", CronbachAlpha(w9a, na.rm = TRUE))))
-#Neuroticism
-w9n <- data.frame(w9$N1, w9$N2, w9$N3, w9$N4, w9$N5, w9$N6)
-colnames(w9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "Willow", "N", CronbachAlpha(w9n, na.rm = TRUE))))
-## York
-y9 <- data.frame(subset(data2019, (Bear == 'York')))
-#Openness
-y9o <- data.frame(y9$O1, y9$O2, y9$O3, y9$O4, y9$O5, y9$O6)
-colnames(y9o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2019", "York", "O", CronbachAlpha(y9o, na.rm = TRUE))))
-#Conscientiousness
-y9c <- data.frame(y9$C1, y9$C2, y9$C3, y9$C4, y9$C5, y9$C6)
-colnames(y9c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2019", "York", "C", CronbachAlpha(y9c, na.rm = TRUE))))
-#Extraversion
-y9e <- data.frame(y9$E1, y9$E2, y9$E3, y9$E4, y9$E5, y9$E6)
-colnames(y9e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2019", "York", "E", CronbachAlpha(y9e, na.rm = TRUE))))
-#Agreeableness
-y9a <- data.frame(y9$A1, y9$A2, y9$A3, y9$A4, y9$A5, y9$A6)
-colnames(y9a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2019", "York", "A", CronbachAlpha(y9a, na.rm = TRUE))))
-#Neuroticism
-y9n <- data.frame(y9$N1, y9$N2, y9$N3, y9$N4, y9$N5, y9$N6)
-colnames(y9n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2019", "York", "N", CronbachAlpha(y9n, na.rm = TRUE))))
-### 2020
-data2020 <- data.frame(subset(data, (Year == '2020')))
-## Aurora
-a2 <- data.frame(subset(data2020, (Bear == 'Aurora')))
-#Openness
-a2o <- data.frame(a2$O1, a2$O2, a2$O3, a2$O4, a2$O5, a2$O6)
-colnames(a2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Aurora", "O", CronbachAlpha(a2o, na.rm = TRUE))))
-#Conscientiousness
-a2c <- data.frame(a2$C1, a2$C2, a2$C3, a2$C4, a2$C5, a2$C6)
-colnames(a2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Aurora", "C", CronbachAlpha(a2c, na.rm = TRUE))))
-#Extraversion
-a2e <- data.frame(a2$E1, a2$E2, a2$E3, a2$E4, a2$E5, a2$E6)
-colnames(a2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Aurora", "E", CronbachAlpha(a2e, na.rm = TRUE))))
-#Agreeableness
-a2a <- data.frame(a2$A1, a2$A2, a2$A3, a2$A4, a2$A5, a2$A6)
-colnames(a2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Aurora", "A", CronbachAlpha(a2a, na.rm = TRUE))))
-#Neuroticism
-a2n <- data.frame(a2$N1, a2$N2, a2$N3, a2$N4, a2$N5, a2$N6)
-colnames(a2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Aurora", "N", CronbachAlpha(a2n, na.rm = TRUE))))
-## Baffin
-b2 <- data.frame(subset(data2020, (Bear == 'Baffin')))
-#Openness
-b2o <- data.frame(b2$O1, b2$O2, b2$O3, b2$O4, b2$O5, b2$O6)
-colnames(b2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Baffin", "O", CronbachAlpha(b2o, na.rm = TRUE))))
-#Conscientiousness
-b2c <- data.frame(b2$C1, b2$C2, b2$C3, b2$C4, b2$C5, b2$C6)
-colnames(b2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Baffin", "C", CronbachAlpha(b2c, na.rm = TRUE))))
-#Extraversion
-b2e <- data.frame(b2$E1, b2$E2, b2$E3, b2$E4, b2$E5, b2$E6)
-colnames(b2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Baffin", "E", CronbachAlpha(b2e, na.rm = TRUE))))
-#Agreeableness
-b2a <- data.frame(b2$A1, b2$A2, b2$A3, b2$A4, b2$A5, b2$A6)
-colnames(b2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Baffin", "A", CronbachAlpha(b2a, na.rm = TRUE))))
-#Neuroticism
-b2n <- data.frame(b2$N1, b2$N2, b2$N3, b2$N4, b2$N5, b2$N6)
-colnames(b2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Baffin", "N", CronbachAlpha(b2n, na.rm = TRUE))))
-## Kaska
-k2 <- data.frame(subset(data2020, (Bear == 'Kaska')))
-#Openness
-k2o <- data.frame(k2$O1, k2$O2, k2$O3, k2$O4, k2$O5, k2$O6)
-colnames(k2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Kaska", "O", CronbachAlpha(k2o, na.rm = TRUE))))
-#Conscientiousness
-k2c <- data.frame(k2$C1, k2$C2, k2$C3, k2$C4, k2$C5, k2$C6)
-colnames(k2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Kaska", "C", CronbachAlpha(k2c, na.rm = TRUE))))
-#Extraversion
-k2e <- data.frame(k2$E1, k2$E2, k2$E3, k2$E4, k2$E5, k2$E6)
-colnames(k2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Kaska", "E", CronbachAlpha(k2e, na.rm = TRUE))))
-#Agreeableness
-k2a <- data.frame(k2$A1, k2$A2, k2$A3, k2$A4, k2$A5, k2$A6)
-colnames(k2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Kaska", "A", CronbachAlpha(k2a, na.rm = TRUE))))
-#Neuroticism
-k2n <- data.frame(k2$N1, k2$N2, k2$N3, k2$N4, k2$N5, k2$N6)
-colnames(k2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Kaska", "N", CronbachAlpha(k2n, na.rm = TRUE))))
-## Nanuq
-n2 <- data.frame(subset(data2020, (Bear == 'Nanuq')))
-#Openness
-n2o <- data.frame(n2$O1, n2$O2, n2$O3, n2$O4, n2$O5, n2$O6)
-colnames(n2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Nanuq", "O", CronbachAlpha(n2o, na.rm = TRUE))))
-#Conscientiousness
-n2c <- data.frame(n2$C1, n2$C2, n2$C3, n2$C4, n2$C5, n2$C6)
-colnames(n2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Nanuq", "C", CronbachAlpha(n2c, na.rm = TRUE))))
-#Extraversion
-n2e <- data.frame(n2$E1, n2$E2, n2$E3, n2$E4, n2$E5, n2$E6)
-colnames(n2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Nanuq", "E", CronbachAlpha(n2e, na.rm = TRUE))))
-#Agreeableness
-n2a <- data.frame(n2$A1, n2$A2, n2$A3, n2$A4, n2$A5, n2$A6)
-colnames(n2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Nanuq", "A", CronbachAlpha(n2a, na.rm = TRUE))))
-#Neuroticism
-n2n <- data.frame(n2$N1, n2$N2, n2$N3, n2$N4, n2$N5, n2$N6)
-colnames(n2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Nanuq", "N", CronbachAlpha(n2n, na.rm = TRUE))))
-## Siku
-si2 <- data.frame(subset(data2020, (Bear == 'Siku')))
-#Openness
-si2o <- data.frame(si2$O1, si2$O2, si2$O3, si2$O4, si2$O5, si2$O6)
-colnames(si2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Siku", "O", CronbachAlpha(si2o, na.rm = TRUE))))
-#Conscientiousness
-si2c <- data.frame(si2$C1, si2$C2, si2$C3, si2$C4, si2$C5, si2$C6)
-colnames(si2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Siku", "C", CronbachAlpha(si2c, na.rm = TRUE))))
-#Extraversion
-si2e <- data.frame(si2$E1, si2$E2, si2$E3, si2$E4, si2$E5, si2$E6)
-colnames(si2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Siku", "E", CronbachAlpha(si2e, na.rm = TRUE))))
-#Agreeableness
-si2a <- data.frame(si2$A1, si2$A2, si2$A3, si2$A4, si2$A5, si2$A6)
-colnames(si2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Siku", "A", CronbachAlpha(si2a, na.rm = TRUE))))
-#Neuroticism
-si2n <- data.frame(si2$N1, si2$N2, si2$N3, si2$N4, si2$N5, si2$N6)
-colnames(si2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Siku", "N", CronbachAlpha(si2n, na.rm = TRUE))))
-## Star
-s2 <- data.frame(subset(data2020, (Bear == 'Star')))
-#Openness
-s2o <- data.frame(s2$O1, s2$O2, s2$O3, s2$O4, s2$O5, s2$O6)
-colnames(s2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Star", "O", CronbachAlpha(s2o, na.rm = TRUE))))
-#Conscientiousness
-s2c <- data.frame(s2$C1, s2$C2, s2$C3, s2$C4, s2$C5, s2$C6)
-colnames(s2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Star", "C", CronbachAlpha(s2c, na.rm = TRUE))))
-#Extraversion
-s2e <- data.frame(s2$E1, s2$E2, s2$E3, s2$E4, s2$E5, s2$E6)
-colnames(s2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Star", "E", CronbachAlpha(s2e, na.rm = TRUE))))
-#Agreeableness
-s2a <- data.frame(s2$A1, s2$A2, s2$A3, s2$A4, s2$A5, s2$A6)
-colnames(s2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Star", "E", CronbachAlpha(s2a, na.rm = TRUE))))
-#Neuroticism
-s2n <- data.frame(s2$N1, s2$N2, s2$N3, s2$N4, s2$N5, s2$N6)
-colnames(s2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Star", "N", CronbachAlpha(s2n, na.rm = TRUE))))
-##Storm
-sm2 <- data.frame(subset(data2020, (Bear == 'Storm')))
-#Openness
-sm2o <- data.frame(sm2$O1, sm2$O2, sm2$O3, sm2$O4, sm2$O5, sm2$O6)
-colnames(sm2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Storm", "O", CronbachAlpha(sm2o, na.rm = TRUE))))
-#Conscientiousness
-sm2c <- data.frame(sm2$C1, sm2$C2, sm2$C3, sm2$C4, sm2$C5, sm2$C6)
-colnames(sm2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Storm", "C", CronbachAlpha(sm2c, na.rm = TRUE))))
-#Extraversion
-sm2e <- data.frame(sm2$E1, sm2$E2, sm2$E3, sm2$E4, sm2$E5, sm2$E6)
-colnames(sm2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Storm", "E", CronbachAlpha(sm2e, na.rm = TRUE))))
-#Agreeableness
-sm2a <- data.frame(sm2$A1, sm2$A2, sm2$A3, sm2$A4, sm2$A5, sm2$A6)
-colnames(sm2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Storm", "A", CronbachAlpha(sm2a, na.rm = TRUE))))
-#Neuroticism
-sm2n <- data.frame(sm2$N1, sm2$N2, sm2$N3, sm2$N4, sm2$N5, sm2$N6)
-colnames(sm2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Storm", "N", CronbachAlpha(sm2n, na.rm = TRUE))))
-## Willow
-w2 <- data.frame(subset(data2020, (Bear == 'Willow')))
-#Openness
-w2o <- data.frame(w2$O1, w2$O2, w2$O3, w2$O4, w2$O5, w2$O6)
-colnames(w2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "Willow", "O", CronbachAlpha(w2o, na.rm = TRUE))))
-#Conscientiousness
-w2c <- data.frame(w2$C1, w2$C2, w2$C3, w2$C4, w2$C5, w2$C6)
-colnames(w2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "Willow", "C", CronbachAlpha(w2c, na.rm = TRUE))))
-#Extraversion
-w2e <- data.frame(w2$E1, w2$E2, w2$E3, w2$E4, w2$E5, w2$E6)
-colnames(w2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "Willow", "E", CronbachAlpha(w2e, na.rm = TRUE))))
-#Agreeableness
-w2a <- data.frame(w2$A1, w2$A2, w2$A3, w2$A4, w2$A5, w2$A6)
-colnames(w2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "Willow", "A", CronbachAlpha(w2a, na.rm = TRUE))))
-#Neuroticism
-w2n <- data.frame(w2$N1, w2$N2, w2$N3, w2$N4, w2$N5, w2$N6)
-colnames(w2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "Willow", "N", CronbachAlpha(w2n, na.rm = TRUE))))
-## York
-y2 <- data.frame(subset(data2020, (Bear == 'York')))
-#Openness
-y2o <- data.frame(y2$O1, y2$O2, y2$O3, y2$O4, y2$O5, y2$O6)
-colnames(y2o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
-IC <- data.frame(IC, add_column(c("2020", "York", "O", CronbachAlpha(y2o, na.rm = TRUE))))
-#Conscientiousness
-y2c <- data.frame(y2$C1, y2$C2, y2$C3, y2$C4, y2$C5, y2$C6)
-colnames(y2c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
-IC <- data.frame(IC, add_column(c("2020", "York", "C", CronbachAlpha(y2c, na.rm = TRUE))))
-#Extraversion
-y2e <- data.frame(y2$E1, y2$E2, y2$E3, y2$E4, y2$E5, y2$E6)
-colnames(y2e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
-IC <- data.frame(IC, add_column(c("2020", "York", "E", CronbachAlpha(y2e, na.rm = TRUE))))
-#Agreeableness
-y2a <- data.frame(y2$A1, y2$A2, y2$A3, y2$A4, y2$A5, y2$A6)
-colnames(y2a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
-IC <- data.frame(IC, add_column(c("2020", "York", "A", CronbachAlpha(y2a, na.rm = TRUE))))
-#Neuroticism
-y2n <- data.frame(y2$N1, y2$N2, y2$N3, y2$N4, y2$N5, y2$N6)
-colnames(y2n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
-IC <- data.frame(IC, add_column(c("2020", "York", "N", CronbachAlpha(y2n, na.rm = TRUE))))
-colnames(IC) <- c(1:135)
-IC <- data.frame(t(IC))
-colnames(IC) <- c("Year", "Bear", "Factor", "Alpha")
-means <- IC
+cons_2019 <- data.frame()
+for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2019, survey_18_20)
+cons_2019 <- rbind(cons_2019, output)# Store output in dataframe
+}
+
+colnames(cons_2019) <- Traits
+cons_2019$Bear <- bears
+cons_2019 <- cons_2019 %>% melt(id = "Bear", value.name = "Alpha", variable.name = "Factor") %>%
+  mutate(Year = 2019)
+
+cons_2020 <- data.frame()
+for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2020, survey_18_20)
+cons_2020 <- rbind(cons_2020, output)# Store output in dataframe
+}
+
+colnames(cons_2020) <- Traits
+cons_2020$Bear <- bears
+cons_2020 <- cons_2020 %>% melt(id = "Bear", value.name = "Alpha", variable.name = "Factor") %>%
+  mutate(Year = 2020)
+
+means <- rbind(cons_2018, cons_2019, cons_2020)
+
 ### Cronbach's Alpha Correlation Graphs (2018,2019,2020)
 means$Year <- as.factor(means$Year)
 means$Alpha <- as.numeric(means$Alpha)
@@ -861,37 +260,42 @@ g + labs(y = "Cronbach's Alpha", x = "Personality Factors") +
   theme(legend.position = "none")+
   geom_hline(yintercept = 0.5, size = 1, color = "red") +
   theme(axis.line = element_line(size = 0.5, colour = "grey90"))
+
+
 ##### Inter-Item Correlation
-rm(list=ls(all=T)) ## Code To Clear
-data <- read_csv("C:/Users/keria/Desktop/Code/Polar Bear Personality Data 2018-2020.csv")
-# o
-o <- data.frame(data$O1, data$O2, data$O3, data$O4, data$O5, data$O6)
-colnames(o) <- c("O1", "O2", "O3", "O4", "O5", "O6")
+
+inter.item.cor <- function (trait, data) {
+  
+  trait <- survey_18_20 %>% select(contains(trait), -Observer, -Exhibit, -Bear, -Month, -Year) %>%
+  trait_cor <- cor(trait, method = "pearson", use = "complete.obs")
+  
+  ouput <- trait_cor %>% 
+    melt(trait_cor) %>%
+    select(-Var1, -Var2) %>%
+    mutate(factor = trait)
+  return
+}
+
 o <- cor(o, method = "pearson", use = "complete.obs")
-# C
-c <- data.frame(data$C1, data$C2, data$C3, data$C4, data$C5, data$C6)
-colnames(c) <- c("C1", "C2", "C3", "C4", "C5", "C6")
+mean(o)
+sd(o)
+
 c <- cor(c, method = "pearson", use = "complete.obs")
 mean(c)
 sd(c)
-# E
-e <- data.frame(data$E1, data$E2, data$E3, data$E4, data$E5, data$E6)
-colnames(e) <- c("E1", "E2", "E3", "E4", "E5", "E6")
+
 e <- cor(e, method = "pearson", use = "complete.obs")
 mean(e)
 sd(e)
-# A
-a <- data.frame(data$A1, data$A2, data$A3, data$A4, data$A5, data$A6)
-colnames(a) <- c("A1", "A2", "A3", "A4", "A5", "A6")
+
 a <- cor(a, method = "pearson", use = "complete.obs")
 mean(a)
 sd(a)
-# N
-n <- data.frame(data$N1, data$N2, data$N3, data$N4, data$N5, data$N6)
-colnames(n) <- c("N1", "N2", "N3", "N4", "N5", "N6")
+
 n <- cor(n, method = "pearson", use = "complete.obs")
 mean(n)
 sd(n)
+
 ## Inter-Item Pearson Correlation Graph
 o <- melt(o)
 c <- melt(c)
@@ -926,16 +330,7 @@ g + labs(y = "Pearson Correlation Coefficient", x = "Personality Factors") +
 # B.4 | Difference and Distribution Code----
 ## Difference Between the Bears and Distribution
 #### data import
-library(tidyverse)
-library(readr)
-library(irr)
-library(DescTools)
-library(car)
-library(ggridges)
-library(dplyr)
-library(lubridate)
-rm(list=ls(all=T)) ## code to clear
-data <- read_csv("C:/Users/keria/Desktop/Code/Polar Bear Personality Data 2018-2020.csv")
+
 #### Data Transformation
 data <- data %>%
   rowwise() %>%
