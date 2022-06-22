@@ -1,11 +1,20 @@
-## Polar Bear Personality Code
-## Chilled-out polar bears: Reliability and validity of the five-factor personality assessment in polar bears (Ursus maritimus) in human care
-## by Kerianne Chant
+# Introduction and setup ----
 
+# Polar Bear Personality Code
+# Chilled-out polar bears: Reliability and validity of the five-factor 
+# personality assessment in polar bears (Ursus maritimus) in human care
+
+# by Kerianne Chant
+# revised by Adam Grottoli
+
+## Setup ----
+# Make sure to set an appropriate workspace!!!
 setwd("P:/Conservation_Research/Restricted/CRD/Research Projects/Polar Bear/Personality/Data/R/polar-bear-personality")
 
-## Radar Charts
-#### data import
+# Load you data
+survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2020.csv")
+
+## Libraries ----
 library(tidyverse)
 library(ggplot2)
 library(reshape2)
@@ -21,9 +30,8 @@ library(readr)
 library(ggridges)
 library(car)
 
-survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2020.csv")
 
-# data wrangle----
+## Data wrangle----
 #we need to create some vectors and dataframes that will be used throughout 
 bears <- unique(survey_18_20$Bear)
 female_bears <- c("Aurora", "Kaska", "Star", "Willow")
