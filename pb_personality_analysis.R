@@ -12,7 +12,7 @@
 setwd("P:/Conservation_Research/Restricted/CRD/Research Projects/Polar Bear/Personality/Data/R/polar-bear-personality")
 
 # Load you data
-survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2020.csv")
+survey_18_20 <- read.csv("Polar Bear Personality Data 2018-2021.csv")
 
 ## Libraries ----
 library(tidyverse)
@@ -289,12 +289,13 @@ ggplot(kendall_plot_by_factor, aes(x = variable, y = value, fill = variable)) +
 
 #### Overall
 
+overall_alpha <- data.frame()
 overall_alpha <- data.frame(sapply(Traits, overall.alpha, survey_18_20))
 
 #### Between The Years
 
 cons_2018 <- data.frame()
-for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2018, survey_18_20)
+for (a in bears) {output <- sapply(Traits, btw.years.alpha, a, 2018, survey_18_20)
 cons_2018 <- rbind(cons_2018, output)# Store output in dataframe
 }
 
@@ -304,7 +305,7 @@ cons_2018 <- cons_2018 %>% melt(id = "Bear", value.name = "Alpha", variable.name
   mutate(Year = 2018)
 
 cons_2019 <- data.frame()
-for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2019, survey_18_20)
+for (a in bears) {output <- sapply(Traits, btw.years.alpha, a, 2019, survey_18_20)
 cons_2019 <- rbind(cons_2019, output)# Store output in dataframe
 }
 
@@ -314,7 +315,7 @@ cons_2019 <- cons_2019 %>% melt(id = "Bear", value.name = "Alpha", variable.name
   mutate(Year = 2019)
 
 cons_2020 <- data.frame()
-for (a in bears) {output <- sapply(Traits, btw.years.cons, a, 2020, survey_18_20)
+for (a in bears) {output <- sapply(Traits, btw.years.alpha, a, 2020, survey_18_20)
 cons_2020 <- rbind(cons_2020, output)# Store output in dataframe
 }
 
@@ -323,7 +324,17 @@ cons_2020$Bear <- bears
 cons_2020 <- cons_2020 %>% melt(id = "Bear", value.name = "Alpha", variable.name = "Factor") %>%
   mutate(Year = 2020)
 
-means <- rbind(cons_2018, cons_2019, cons_2020)
+cons_2021 <- data.frame()
+for (a in bears) {output <- sapply(Traits, btw.years.alpha, a, 2021, survey_18_20)
+cons_2021 <- rbind(cons_2021, output)# Store output in dataframe
+}
+
+colnames(cons_2021) <- Traits
+cons_2021$Bear <- bears
+cons_2021 <- cons_2021 %>% melt(id = "Bear", value.name = "Alpha", variable.name = "Factor") %>%
+  mutate(Year = 2021)
+
+means <- rbind(cons_2018, cons_2019, cons_2020, cons_2021)
 
 ### Cronbach's Alpha Correlation Graphs (2018,2019,2020)
 means$Year <- as.factor(means$Year)
